@@ -51,6 +51,11 @@ const VERTICES: &[Vertex] = &[
     Vertex { position: [0.5, 0.5, 0.0], tex_coords: [1.0, 0.0]},
     Vertex { position: [-0.5, -0.5, 0.0], tex_coords: [0.0, 1.0]},
     Vertex { position: [0.5, -0.5, 0.0], tex_coords: [1.0, 1.0]},
+
+    Vertex { position: [-0.5, -0.5, 0.5], tex_coords: [0.0, 0.0]},
+    Vertex { position: [0.5,  -0.5, 0.5], tex_coords: [1.0, 0.0]},
+    Vertex { position: [-0.5,  -0.5, -0.5], tex_coords: [0.0, 1.0]},
+    Vertex { position: [0.5, -0.5, -0.5], tex_coords: [1.0, 1.0]},
 ];
 
 // assumes every polygon is a tri with 3 vertices
@@ -61,6 +66,9 @@ const INDICES: &[u16] = &[
     // 2, 3, 4,
     2, 3, 1,
     1, 0, 2,
+
+    2+4, 3+4, 1+4,
+    1+4, 0+4, 2+4,
 ];
 
 #[rustfmt::skip]
@@ -123,6 +131,8 @@ struct CameraController {
     is_backward_pressed: bool,
     is_left_pressed: bool,
     is_right_pressed: bool,
+    is_up_pressed: bool,
+    is_down_pressed: bool,
 }
 
 impl CameraController {
@@ -133,6 +143,8 @@ impl CameraController {
             is_backward_pressed: false,
             is_left_pressed: false,
             is_right_pressed: false,
+            is_up_pressed: false,
+            is_down_pressed: false,
         }
     }
 
@@ -164,6 +176,14 @@ impl CameraController {
                         self.is_right_pressed = is_pressed;
                         true
                     }
+                    VirtualKeyCode::Space => {
+                        self.is_up_pressed = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::LShift => {
+                        self.is_down_pressed = is_pressed;
+                        true
+                    }
                     _ => false,
                 }
             }
@@ -181,25 +201,39 @@ impl CameraController {
         // center of the scene.
         if self.is_forward_pressed && forward_mag > self.speed {
             camera.eye += forward_norm * self.speed;
+            camera.target += forward_norm * self.speed;
         }
         if self.is_backward_pressed {
             camera.eye -= forward_norm * self.speed;
+            camera.target -= forward_norm * self.speed;
+        }
+        if self.is_up_pressed {
+            camera.eye += camera.up.normalize() * self.speed;
+            camera.target += camera.up.normalize() * self.speed;
+        }
+        if self.is_down_pressed {
+            camera.eye -= camera.up.normalize() * self.speed;
+            camera.target -= camera.up.normalize() * self.speed;
         }
 
         let right = forward_norm.cross(camera.up);
 
         // Redo radius calc in case the fowrard/backward is pressed.
-        let forward = camera.target - camera.eye;
-        let forward_mag = forward.magnitude();
+        // let forward = camera.target - camera.eye;
+        // let forward_mag = forward.magnitude();
 
         if self.is_right_pressed {
             // Rescale the distance between the target and eye so 
             // that it doesn't change. The eye therefore still 
             // lies on the circle made by the target and eye.
-            camera.eye = camera.target - (forward + right * self.speed).normalize() * forward_mag;
+            // camera.eye = camera.target - (forward + right * self.speed).normalize() * forward_mag;
+            camera.eye += right * self.speed;
+            camera.target += right * self.speed;
         }
         if self.is_left_pressed {
-            camera.eye = camera.target - (forward - right * self.speed).normalize() * forward_mag;
+            // camera.eye = camera.target - (forward - right * self.speed).normalize() * forward_mag;
+            camera.eye -= right * self.speed;
+            camera.target -= right * self.speed;
         }
     }
 }
@@ -229,7 +263,7 @@ impl State {
     // Creating some of the wgpu types requires async code
     async fn new(window: &Window) -> Self {
         let size = window.inner_size();
-        let camera_controller = CameraController::new(0.2);
+        let camera_controller = CameraController::new(0.1);
 
         // The instance is a handle to our GPU
         // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
@@ -403,7 +437,7 @@ impl State {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw, // Counter clockwise
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None,//Some(wgpu::Face::Back),
                 // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                 polygon_mode: wgpu::PolygonMode::Fill,
                 // Requires Features::DEPTH_CLIP_CONTROL
