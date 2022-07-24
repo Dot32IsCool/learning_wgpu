@@ -127,24 +127,36 @@ impl CameraUniform {
 
 struct CameraController {
     speed: f32,
-    is_forward_pressed: bool,
-    is_backward_pressed: bool,
-    is_left_pressed: bool,
-    is_right_pressed: bool,
-    is_up_pressed: bool,
-    is_down_pressed: bool,
+    
+    move_forward: bool,
+    move_backward: bool,
+    move_left: bool,
+    move_right: bool,
+    move_up: bool,
+    move_down: bool,
+
+    look_left: bool,
+    look_right: bool,
+    look_up: bool,
+    look_down: bool,
 }
 
 impl CameraController {
     fn new(speed: f32) -> Self {
         Self {
             speed,
-            is_forward_pressed: false,
-            is_backward_pressed: false,
-            is_left_pressed: false,
-            is_right_pressed: false,
-            is_up_pressed: false,
-            is_down_pressed: false,
+
+            move_forward: false,
+            move_backward: false,
+            move_left: false,
+            move_right: false,
+            move_up: false,
+            move_down: false,
+
+            look_left: false,
+            look_right: false,
+            look_up: false,
+            look_down: false,
         }
     }
 
@@ -160,28 +172,44 @@ impl CameraController {
             } => {
                 let is_pressed = *state == ElementState::Pressed;
                 match keycode {
-                    VirtualKeyCode::W | VirtualKeyCode::Up => {
-                        self.is_forward_pressed = is_pressed;
+                    VirtualKeyCode::W => {
+                        self.move_forward = is_pressed;
                         true
                     }
-                    VirtualKeyCode::A | VirtualKeyCode::Left => {
-                        self.is_left_pressed = is_pressed;
+                    VirtualKeyCode::A => {
+                        self.move_left = is_pressed;
                         true
                     }
-                    VirtualKeyCode::S | VirtualKeyCode::Down => {
-                        self.is_backward_pressed = is_pressed;
+                    VirtualKeyCode::S => {
+                        self.move_backward = is_pressed;
                         true
                     }
-                    VirtualKeyCode::D | VirtualKeyCode::Right => {
-                        self.is_right_pressed = is_pressed;
+                    VirtualKeyCode::D => {
+                        self.move_right = is_pressed;
                         true
                     }
                     VirtualKeyCode::Space => {
-                        self.is_up_pressed = is_pressed;
+                        self.move_up = is_pressed;
                         true
                     }
-                    VirtualKeyCode::LShift => {
-                        self.is_down_pressed = is_pressed;
+                    VirtualKeyCode::LShift | VirtualKeyCode::RShift => {
+                        self.move_down = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::Left => {
+                        self.look_left = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::Right => {
+                        self.look_right = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::Up => {
+                        self.look_up = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::Down => {
+                        self.look_down = is_pressed;
                         true
                     }
                     _ => false,
@@ -199,19 +227,19 @@ impl CameraController {
 
         // Prevents glitching when camera gets too close to the
         // center of the scene.
-        if self.is_forward_pressed && forward_mag > self.speed {
+        if self.move_forward && forward_mag > self.speed {
             camera.eye += forward_norm * self.speed;
             camera.target += forward_norm * self.speed;
         }
-        if self.is_backward_pressed {
+        if self.move_backward {
             camera.eye -= forward_norm * self.speed;
             camera.target -= forward_norm * self.speed;
         }
-        if self.is_up_pressed {
+        if self.move_up {
             camera.eye += camera.up.normalize() * self.speed;
             camera.target += camera.up.normalize() * self.speed;
         }
-        if self.is_down_pressed {
+        if self.move_down {
             camera.eye -= camera.up.normalize() * self.speed;
             camera.target -= camera.up.normalize() * self.speed;
         }
@@ -222,7 +250,7 @@ impl CameraController {
         // let forward = camera.target - camera.eye;
         // let forward_mag = forward.magnitude();
 
-        if self.is_right_pressed {
+        if self.move_right {
             // Rescale the distance between the target and eye so 
             // that it doesn't change. The eye therefore still 
             // lies on the circle made by the target and eye.
@@ -230,9 +258,18 @@ impl CameraController {
             camera.eye += right * self.speed;
             camera.target += right * self.speed;
         }
-        if self.is_left_pressed {
+        if self.move_left {
             // camera.eye = camera.target - (forward - right * self.speed).normalize() * forward_mag;
             camera.eye -= right * self.speed;
+            camera.target -= right * self.speed;
+        }
+
+        // look here bitch
+
+        if self.look_right {
+            camera.target += right * self.speed;
+        }
+        if self.look_left {
             camera.target -= right * self.speed;
         }
     }
