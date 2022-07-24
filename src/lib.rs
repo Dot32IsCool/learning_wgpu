@@ -272,6 +272,15 @@ impl CameraController {
         if self.look_left {
             camera.target -= right * self.speed;
         }
+
+        let relative_up = right.cross(forward_norm);
+
+        if self.look_up {
+            camera.target += relative_up * self.speed;
+        }
+        if self.look_down {
+            camera.target -= relative_up * self.speed;
+        }
     }
 }
  
@@ -300,7 +309,7 @@ impl State {
     // Creating some of the wgpu types requires async code
     async fn new(window: &Window) -> Self {
         let size = window.inner_size();
-        let camera_controller = CameraController::new(0.1);
+        let camera_controller = CameraController::new(0.03);
 
         // The instance is a handle to our GPU
         // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
@@ -564,10 +573,14 @@ impl State {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
+                            // r: 0.1,
+                            // g: 0.2,
+                            // b: 0.3,
+                            // a: 1.0,
+                            r: 0.013,
+                            g: 0.013,
+                            b: 0.013,
+                            a: 1.013,
                         }),
                         store: true,
                     },
